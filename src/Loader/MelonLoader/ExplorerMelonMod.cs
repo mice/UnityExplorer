@@ -21,18 +21,47 @@ namespace UnityExplorer
     public class ExplorerMelonMod : MelonMod, IExplorerLoader
     {
         public string ExplorerFolderName => ExplorerCore.DEFAULT_EXPLORER_FOLDER_NAME;
-        public string ExplorerFolderDestination => MelonHandler.ModsDirectory;
+        public string ExplorerFolderDestination
+        {
+            get
+            {
+                // In MelonLoader 0.71+, Location points to the mod DLL
+                // Mods directory is the parent directory of the mod DLL
+                var modsDir = Path.GetDirectoryName(Location);
+                if (string.IsNullOrEmpty(modsDir))
+                {
+                    // Fallback: try to find Mods directory relative to game directory
+                    var gameDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                    if (!string.IsNullOrEmpty(gameDir))
+                    {
+                        modsDir = Path.Combine(gameDir, "Mods");
+                    }
+                }
+                return modsDir ?? "Mods";
+            }
+        }
 
-        public string UnhollowedModulesFolder => Path.Combine(
-            Path.GetDirectoryName(MelonHandler.ModsDirectory),
-            Path.Combine("MelonLoader", "Managed"));
+        public string UnhollowedModulesFolder
+        {
+            get
+            {
+                // Try to find MelonLoader/Managed directory
+                var modsDir = ExplorerFolderDestination;
+                var gameDir = Path.GetDirectoryName(modsDir);
+                if (string.IsNullOrEmpty(gameDir))
+                {
+                    gameDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                }
+                return Path.Combine(Path.Combine(gameDir ?? ".", "MelonLoader"), "Managed");
+            }
+        }
 
         public ConfigHandler ConfigHandler => _configHandler;
         public MelonLoaderConfigHandler _configHandler;
 
-        public Action<object> OnLogMessage => LoggerInstance.Msg;
-        public Action<object> OnLogWarning => LoggerInstance.Warning;
-        public Action<object> OnLogError   => LoggerInstance.Error;
+        public Action<object> OnLogMessage => MelonLogger.Msg;
+        public Action<object> OnLogWarning => MelonLogger.Warning;
+        public Action<object> OnLogError   => MelonLogger.Error;
 
         public override void OnApplicationStart()
         {
